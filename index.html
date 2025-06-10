@@ -55,10 +55,12 @@
   <script>
     // Replace with your Dropbox API access token.
     const ACCESS_TOKEN = "YOUR_DROPBOX_ACCESS_TOKEN";
+    // Root folder that will contain all uploaded company folders.
+    const ROOT_FOLDER = "/FlightDelayUploads";
 
     async function createFolder(path) {
       const url = "https://api.dropboxapi.com/2/files/create_folder_v2";
-      return fetch(url, {
+      const res = await fetch(url, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${ACCESS_TOKEN}`,
@@ -66,11 +68,15 @@
         },
         body: JSON.stringify({ path })
       });
+      if (!res.ok) {
+        throw new Error(`Failed to create folder ${path}: ${res.status}`);
+      }
+      return res;
     }
 
     async function uploadFile(path, file) {
       const url = "https://content.dropboxapi.com/2/files/upload";
-      return fetch(url, {
+      const res = await fetch(url, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${ACCESS_TOKEN}`,
@@ -83,19 +89,26 @@
         },
         body: file
       });
+      if (!res.ok) {
+        throw new Error(`Failed to upload ${path}: ${res.status}`);
+      }
+      return res;
     }
 
     document.getElementById('uploadForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-
+      
       const companyName = document.getElementById('companyName').value.trim();
       if (!companyName) {
         alert('Company name is required.');
         return;
       }
 
-      const baseFolder = `/${companyName}`;
-      await createFolder(baseFolder).catch(console.error);
+      // Ensure the root folder exists and then create the company subfolder.
+      try {
+        await createFolder(ROOT_FOLDER).catch(() => {});
+        const baseFolder = `${ROOT_FOLDER}/${companyName}`;
+        await createFolder(baseFolder);
 
       const slots = [
         { id: 'doc1', name: 'Document1' },
@@ -113,14 +126,18 @@
         const file = input.files[0];
         if (file) {
           const folderPath = `${baseFolder}/${slot.name}`;
-          await createFolder(folderPath).catch(console.error);
+          await createFolder(folderPath);
           const filePath = `${folderPath}/${file.name}`;
-          await uploadFile(filePath, file).catch(console.error);
+          await uploadFile(filePath, file);
         }
       }
 
       alert('Upload complete!');
       e.target.reset();
+      } catch (err) {
+        console.error(err);
+        alert('Upload failed. Check the console for details.');
+      }
     });
   </script>
 </body>
