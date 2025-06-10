@@ -55,6 +55,8 @@
   <script>
     // Replace with your Dropbox API access token.
     const ACCESS_TOKEN = "YOUR_DROPBOX_ACCESS_TOKEN";
+    // Root folder that will contain all uploaded company folders.
+    const ROOT_FOLDER = "/FlightDelayUploads";
 
     async function createFolder(path) {
       const url = "https://api.dropboxapi.com/2/files/create_folder_v2";
@@ -94,7 +96,9 @@
         return;
       }
 
-      const baseFolder = `/${companyName}`;
+      // Ensure the root folder exists and then create the company subfolder.
+      await createFolder(ROOT_FOLDER).catch(() => {});
+      const baseFolder = `${ROOT_FOLDER}/${companyName}`;
       await createFolder(baseFolder).catch(console.error);
 
       const slots = [
